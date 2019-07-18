@@ -35,7 +35,13 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         this.query = getTemplate(templateQuery.value());
         this.countQuery = getTemplate(templateQuery.countQuery());
         ReturnedType returnedType = getQueryMethod().getResultProcessor().getReturnedType();
-        this.resultClass = getQueryMethod().isQueryForEntity() ? returnedType.getDomainType() : null;
+        if (getQueryMethod().isQueryForEntity()) {
+            this.resultClass = returnedType.getDomainType();
+        } else if (templateQuery.resultClass() != Object.class) {
+            this.resultClass = templateQuery.resultClass();
+        } else {
+            this.resultClass = null;
+        }
     }
 
     @Override
