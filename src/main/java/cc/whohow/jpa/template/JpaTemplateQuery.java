@@ -38,6 +38,7 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         super(method, em);
         this.templateQuery = templateQuery;
         this.query = getTemplate(templateQuery.value());
+        this.countQuery = getTemplate(templateQuery.countQuery());
         this.resultClass = detectResultClass();
         this.isEntityResultClass = isEntityResultClass(resultClass);
     }
@@ -65,11 +66,7 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
 
     protected Template getCountQueryTemplate() {
         if (countQuery == null) {
-            if (templateQuery.countQuery().isEmpty()) {
-                countQuery = getTemplate(QueryUtils.createCountQueryFor(templateQuery.value()));
-            } else {
-                countQuery = getTemplate(templateQuery.countQuery());
-            }
+            countQuery = getTemplate(QueryUtils.createCountQueryFor(templateQuery.value()));
         }
         return countQuery;
     }
@@ -131,7 +128,7 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         }
     }
 
-    private Map<String, Object> getContext(Object[] values) {
+    protected Map<String, Object> getContext(Object[] values) {
         JpaParameters parameters = getQueryMethod().getParameters();
         Map<String, Object> context = new HashMap<>();
         for (int i = 0; i < parameters.getNumberOfParameters(); i++) {

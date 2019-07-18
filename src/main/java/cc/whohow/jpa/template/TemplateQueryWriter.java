@@ -72,6 +72,7 @@ public class TemplateQueryWriter extends Writer {
 
     @Override
     public String toString() {
+        // TODO where 1=1 
         StringBuilder builder = new StringBuilder(length);
         boolean where = false;
         for (CharSequence sequence : buffer) {

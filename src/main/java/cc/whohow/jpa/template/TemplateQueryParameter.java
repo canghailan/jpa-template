@@ -11,8 +11,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 public class TemplateQueryParameter extends Directive {
-    private static final String COUNT = "_template_query_parameter_count_";
-    private static final String NAME = "_tqp_x_";
+    private static final String COUNT = "TemplateQueryParameter.count";
 
     @Override
     public String getName() {
@@ -37,10 +36,14 @@ public class TemplateQueryParameter extends Directive {
         Integer count = (Integer) context.get(COUNT);
         if (count == null) {
             context.put(COUNT, 1);
-            return NAME + 0;
+            return getTempName(0);
         } else {
             context.put(COUNT, count + 1);
-            return "_tqp_x_" + count;
+            return getTempName(count);
         }
+    }
+
+    private String getTempName(Integer i) {
+        return "_x" + i + "_";
     }
 }
