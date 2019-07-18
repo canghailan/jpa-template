@@ -20,8 +20,8 @@ import java.util.Optional;
 
 public class JpaTemplateQuery extends AbstractJpaQuery {
     static {
-        RuntimeSingleton.loadDirective("com.yitong.jpa.TemplateQueryParameter");
-        RuntimeSingleton.loadDirective("com.yitong.jpa.TemplateQueryWhere");
+        RuntimeSingleton.loadDirective(TemplateQueryParameter.class.getName());
+        RuntimeSingleton.loadDirective(TemplateQueryWhere.class.getName());
     }
 
     private final TemplateQuery templateQuery;
