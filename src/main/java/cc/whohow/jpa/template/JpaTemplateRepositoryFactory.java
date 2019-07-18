@@ -6,7 +6,6 @@ import org.springframework.data.repository.query.EvaluationContextProvider;
 import org.springframework.data.repository.query.QueryLookupStrategy;
 
 import javax.persistence.EntityManager;
-import java.util.Optional;
 
 public class JpaTemplateRepositoryFactory extends JpaRepositoryFactory {
     private final EntityManager entityManager;
@@ -20,7 +19,7 @@ public class JpaTemplateRepositoryFactory extends JpaRepositoryFactory {
     }
 
     @Override
-    protected Optional<QueryLookupStrategy> getQueryLookupStrategy(QueryLookupStrategy.Key key, EvaluationContextProvider evaluationContextProvider) {
-        return Optional.of(new TemplateQueryLookupStrategy(entityManager, key, extractor, evaluationContextProvider));
+    protected QueryLookupStrategy getQueryLookupStrategy(QueryLookupStrategy.Key key, EvaluationContextProvider evaluationContextProvider) {
+        return new TemplateQueryLookupStrategy(entityManager, key, extractor, evaluationContextProvider);
     }
 }
