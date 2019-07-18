@@ -28,64 +28,43 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         RuntimeSingleton.loadDirective(TemplateQueryWhere.class.getName());
     }
 
-    private final TemplateQuery templateQuery;
+    private TemplateQuery templateQuery;
     private Template query;
     private Template countQuery;
-    private Class<?> resultClass;
-    private boolean isEntityResultClass;
+    private Class<?> entityClass;
 
     public JpaTemplateQuery(JpaQueryMethod method, EntityManager em, TemplateQuery templateQuery) {
         super(method, em);
         this.templateQuery = templateQuery;
         this.query = getTemplate(templateQuery.value());
         this.countQuery = getTemplate(templateQuery.countQuery());
-        this.resultClass = detectResultClass();
-        this.isEntityResultClass = isEntityResultClass(resultClass);
-    }
-
-    protected Class<?> detectResultClass() {
-        if (templateQuery.resultClass() != Object.class) {
-            return templateQuery.resultClass();
-        }
-        return getQueryMethod().getReturnedObjectType();
-    }
-
-    protected boolean isEntityResultClass(Class<?> resultClass) {
-        return resultClass != null && resultClass.isAnnotationPresent(Entity.class);
+        this.entityClass = detectEntityClass();
     }
 
     @Override
     protected Query doCreateQuery(Object[] values) {
-        return doCreate(query, values, isEntityResultClass, resultClass);
+        return doCreate(query, values, entityClass);
     }
 
     @Override
     protected Query doCreateCountQuery(Object[] values) {
-        return doCreate(getCountQueryTemplate(), values, false, Number.class);
+        return doCreate(getCountQueryTemplate(), values, null);
     }
 
-    protected Template getCountQueryTemplate() {
-        if (countQuery == null) {
-            countQuery = getTemplate(QueryUtils.createCountQueryFor(templateQuery.value()));
-        }
-        return countQuery;
-    }
-
-    protected Query doCreate(Template template, Object[] values,
-                             boolean usingResultClass, Class<?> resultClass) {
+    protected Query doCreate(Template queryTemplate, Object[] values, Class<?> resultClass) {
         VelocityContext context = new VelocityContext(getContext(values));
 
         Writer buffer = new TemplateQueryWriter();
-        template.merge(context, buffer);
+        queryTemplate.merge(context, buffer);
         String sql = buffer.toString();
 
         Query query = isNativeQuery() ?
-                usingResultClass ?
-                        getEntityManager().createNativeQuery(sql, resultClass) :
+                (resultClass == null) ?
                         getEntityManager().createNativeQuery(sql) :
-                usingResultClass ?
-                        getEntityManager().createQuery(sql, resultClass) :
-                        getEntityManager().createQuery(sql);
+                        getEntityManager().createNativeQuery(sql, resultClass) :
+                (resultClass == null) ?
+                        getEntityManager().createQuery(sql) :
+                        getEntityManager().createQuery(sql, resultClass);
 
         for (Parameter<?> parameter : query.getParameters()) {
             if (parameter.getPosition() != null) {
@@ -100,6 +79,28 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
 
     protected boolean isNativeQuery() {
         return templateQuery.nativeQuery();
+    }
+
+    protected Template getCountQueryTemplate() {
+        if (countQuery == null) {
+            countQuery = getTemplate(QueryUtils.createCountQueryFor(templateQuery.value()));
+        }
+        return countQuery;
+    }
+
+    protected Class<?> detectResultClass() {
+        if (templateQuery.resultClass() != Object.class) {
+            return templateQuery.resultClass();
+        }
+        return getQueryMethod().getReturnedObjectType();
+    }
+
+    protected Class<?> detectEntityClass() {
+        Class<?> resultClass = detectResultClass();
+        if (resultClass.isAnnotationPresent(Entity.class)) {
+            return resultClass;
+        }
+        return null;
     }
 
     protected Template getTemplate(String text) {
