@@ -15,4 +15,6 @@ public @interface TemplateQuery {
     String countQuery() default "";
 
     boolean nativeQuery() default true;
+
+    Class<?> resultClass() default Object.class;
 }
