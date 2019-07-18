@@ -8,12 +8,17 @@ import org.apache.velocity.runtime.parser.ParseException;
 import org.springframework.data.jpa.repository.query.AbstractJpaQuery;
 import org.springframework.data.jpa.repository.query.JpaParameters;
 import org.springframework.data.jpa.repository.query.JpaQueryMethod;
-import org.springframework.data.repository.query.ReturnedType;
+import org.springframework.data.jpa.repository.query.QueryUtils;
 
+import javax.persistence.Entity;
 import javax.persistence.EntityManager;
 import javax.persistence.Parameter;
 import javax.persistence.Query;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,46 +32,63 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
     private Template query;
     private Template countQuery;
     private Class<?> resultClass;
+    private boolean isEntityResultClass;
 
     public JpaTemplateQuery(JpaQueryMethod method, EntityManager em, TemplateQuery templateQuery) {
         super(method, em);
         this.templateQuery = templateQuery;
         this.query = getTemplate(templateQuery.value());
-        this.countQuery = getTemplate(templateQuery.countQuery());
-        ReturnedType returnedType = getQueryMethod().getResultProcessor().getReturnedType();
-        if (getQueryMethod().isQueryForEntity()) {
-            this.resultClass = returnedType.getDomainType();
-        } else if (templateQuery.resultClass() != Object.class) {
-            this.resultClass = templateQuery.resultClass();
-        } else {
-            this.resultClass = null;
+        this.resultClass = detectResultClass();
+        this.isEntityResultClass = isEntityResultClass(resultClass);
+    }
+
+    protected Class<?> detectResultClass() {
+        if (templateQuery.resultClass() != Object.class) {
+            return templateQuery.resultClass();
         }
+        return getQueryMethod().getReturnedObjectType();
+    }
+
+    protected boolean isEntityResultClass(Class<?> resultClass) {
+        return resultClass != null && resultClass.isAnnotationPresent(Entity.class);
     }
 
     @Override
     protected Query doCreateQuery(Object[] values) {
-        return doCreate(query, values);
+        return doCreate(query, values, isEntityResultClass, resultClass);
     }
 
     @Override
     protected Query doCreateCountQuery(Object[] values) {
-        return doCreate(countQuery, values);
+        return doCreate(getCountQueryTemplate(), values, false, Number.class);
     }
 
-    private Query doCreate(Template template, Object[] values) {
+    protected Template getCountQueryTemplate() {
+        if (countQuery == null) {
+            if (templateQuery.countQuery().isEmpty()) {
+                countQuery = getTemplate(QueryUtils.createCountQueryFor(templateQuery.value()));
+            } else {
+                countQuery = getTemplate(templateQuery.countQuery());
+            }
+        }
+        return countQuery;
+    }
+
+    protected Query doCreate(Template template, Object[] values,
+                             boolean usingResultClass, Class<?> resultClass) {
         VelocityContext context = new VelocityContext(getContext(values));
 
         Writer buffer = new TemplateQueryWriter();
         template.merge(context, buffer);
         String sql = buffer.toString();
 
-        Query query = templateQuery.nativeQuery() ?
-                (resultClass == null) ?
-                        getEntityManager().createNativeQuery(sql) :
+        Query query = isNativeQuery() ?
+                usingResultClass ?
                         getEntityManager().createNativeQuery(sql, resultClass) :
-                (resultClass == null) ?
-                        getEntityManager().createQuery(sql) :
-                        getEntityManager().createQuery(sql, resultClass);
+                        getEntityManager().createNativeQuery(sql) :
+                usingResultClass ?
+                        getEntityManager().createQuery(sql, resultClass) :
+                        getEntityManager().createQuery(sql);
 
         for (Parameter<?> parameter : query.getParameters()) {
             if (parameter.getPosition() != null) {
@@ -79,7 +101,11 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         return query;
     }
 
-    private Template getTemplate(String text) {
+    protected boolean isNativeQuery() {
+        return templateQuery.nativeQuery();
+    }
+
+    protected Template getTemplate(String text) {
         if (text.isEmpty()) {
             return null;
         }
@@ -87,10 +113,20 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
             RuntimeServices runtimeServices = RuntimeSingleton.getRuntimeServices();
             Template template = new Template();
             template.setRuntimeServices(runtimeServices);
-            template.setData(runtimeServices.parse(text, getQueryMethod().getName()));
+            template.setData(runtimeServices.parse(text, getQueryMethod().getName() + "." + hash(text)));
             template.initDocument();
             return template;
         } catch (ParseException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    protected String hash(String text) {
+        try {
+            return Base64.getEncoder().encodeToString(
+                    MessageDigest.getInstance("MD5").digest(
+                            text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
     }
