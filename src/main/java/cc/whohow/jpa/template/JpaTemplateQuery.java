@@ -21,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class JpaTemplateQuery extends AbstractJpaQuery {
     static {
@@ -134,9 +135,9 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         Map<String, Object> context = new HashMap<>();
         for (int i = 0; i < parameters.getNumberOfParameters(); i++) {
             org.springframework.data.repository.query.Parameter parameter = parameters.getParameter(i);
-            String name = parameter.getName();
-            if (name != null) {
-                context.put(name, values[i]);
+            Optional<String> name = parameter.getName();
+            if (name.isPresent()) {
+                context.put(name.get(), values[i]);
             }
         }
         return context;
