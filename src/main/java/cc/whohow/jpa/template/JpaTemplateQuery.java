@@ -22,6 +22,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 public class JpaTemplateQuery extends AbstractJpaQuery {
     static {
@@ -30,42 +31,59 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
     }
 
     private TemplateQuery templateQuery;
+    private Function<String, String> queryResolver;
     private Template query;
     private Template countQuery;
     private Class<?> entityClass;
 
-    public JpaTemplateQuery(JpaQueryMethod method, EntityManager em, TemplateQuery templateQuery) {
+    public JpaTemplateQuery(JpaQueryMethod method, EntityManager em,
+                            TemplateQuery templateQuery,
+                            Function<String, String> queryResolver) {
         super(method, em);
         this.templateQuery = templateQuery;
-        this.query = getTemplate(templateQuery.value());
-        this.countQuery = getTemplate(templateQuery.countQuery());
+        this.queryResolver = queryResolver;
+        this.query = getTemplate(resolveQuery(templateQuery.value(), templateQuery.name()));
         this.entityClass = detectEntityClass();
     }
 
     @Override
     protected Query doCreateQuery(Object[] values) {
-        return doCreate(query, values, entityClass);
+        VelocityContext context = new VelocityContext(getContext(values));
+
+        Writer buffer = new TemplateQueryWriter();
+        query.merge(context, buffer);
+        String sql = buffer.toString();
+
+        Query query = isNativeQuery() ?
+                (entityClass == null) ?
+                        getEntityManager().createNativeQuery(sql) :
+                        getEntityManager().createNativeQuery(sql, entityClass) :
+                (entityClass == null) ?
+                        getEntityManager().createQuery(sql) :
+                        getEntityManager().createQuery(sql, entityClass);
+
+        for (Parameter<?> parameter : query.getParameters()) {
+            if (parameter.getPosition() != null) {
+                query.setParameter(parameter.getPosition(), values[parameter.getPosition()]);
+            } else {
+                query.setParameter(parameter.getName(), context.get(parameter.getName()));
+            }
+        }
+
+        return query;
     }
 
     @Override
     protected Query doCreateCountQuery(Object[] values) {
-        return doCreate(getCountQueryTemplate(), values, null);
-    }
-
-    protected Query doCreate(Template queryTemplate, Object[] values, Class<?> resultClass) {
         VelocityContext context = new VelocityContext(getContext(values));
 
         Writer buffer = new TemplateQueryWriter();
-        queryTemplate.merge(context, buffer);
-        String sql = buffer.toString();
+        query.merge(context, buffer);
+        String sql = QueryUtils.createCountQueryFor(buffer.toString());
 
         Query query = isNativeQuery() ?
-                (resultClass == null) ?
-                        getEntityManager().createNativeQuery(sql) :
-                        getEntityManager().createNativeQuery(sql, resultClass) :
-                (resultClass == null) ?
-                        getEntityManager().createQuery(sql) :
-                        getEntityManager().createQuery(sql, resultClass);
+                getEntityManager().createNativeQuery(sql) :
+                getEntityManager().createQuery(sql);
 
         for (Parameter<?> parameter : query.getParameters()) {
             if (parameter.getPosition() != null) {
@@ -80,13 +98,6 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
 
     protected boolean isNativeQuery() {
         return templateQuery.nativeQuery();
-    }
-
-    protected Template getCountQueryTemplate() {
-        if (countQuery == null) {
-            countQuery = getTemplate(QueryUtils.createCountQueryFor(templateQuery.value()));
-        }
-        return countQuery;
     }
 
     protected Class<?> detectResultClass() {
@@ -105,7 +116,7 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
     }
 
     protected Template getTemplate(String text) {
-        if (text.isEmpty()) {
+        if (text == null || text.isEmpty()) {
             return null;
         }
         try {
@@ -118,6 +129,10 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
         } catch (ParseException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    protected String resolveQuery(String query, String name) {
+        return query.isEmpty() ? queryResolver.apply(name) : query;
     }
 
     protected String hash(String text) {

@@ -33,7 +33,10 @@ public class TemplateQueryLookupStrategy implements QueryLookupStrategy {
     public RepositoryQuery resolveQuery(Method method, RepositoryMetadata metadata, ProjectionFactory factory, NamedQueries namedQueries) {
         TemplateQuery templateQuery = method.getAnnotation(TemplateQuery.class);
         if (templateQuery != null) {
-            return new JpaTemplateQuery(new JpaQueryMethod(method, metadata, factory, extractor), entityManager, templateQuery);
+            return new JpaTemplateQuery(
+                    new JpaQueryMethod(method, metadata, factory, extractor), entityManager,
+                    templateQuery,
+                    new TemplateQueryResolver(method));
         }
         return jpaQueryLookupStrategy.resolveQuery(method, metadata, factory, namedQueries);
     }

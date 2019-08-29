@@ -12,7 +12,7 @@ import java.lang.annotation.*;
 public @interface TemplateQuery {
     String value() default "";
 
-    String countQuery() default "";
+    String name() default "";
 
     boolean nativeQuery() default true;
 
