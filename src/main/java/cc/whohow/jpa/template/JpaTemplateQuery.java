@@ -26,6 +26,8 @@ import java.util.function.Function;
 
 public class JpaTemplateQuery extends AbstractJpaQuery {
     static {
+        RuntimeSingleton.loadDirective(Ifnull.class.getName());
+        RuntimeSingleton.loadDirective(Ifnotnull.class.getName());
         RuntimeSingleton.loadDirective(TemplateQueryParameter.class.getName());
         RuntimeSingleton.loadDirective(TemplateQueryWhere.class.getName());
     }
