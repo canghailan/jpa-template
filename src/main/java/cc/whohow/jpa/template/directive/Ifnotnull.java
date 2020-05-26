@@ -1,4 +1,4 @@
-package cc.whohow.jpa.template;
+package cc.whohow.jpa.template.directive;
 
 /*
  * Copyright 2003-2004 The Apache Software Foundation.
@@ -16,15 +16,15 @@ package cc.whohow.jpa.template;
  * limitations under the License.
  */
 
-import java.io.IOException;
-import java.io.Writer;
-
 import org.apache.velocity.context.InternalContextAdapter;
 import org.apache.velocity.exception.MethodInvocationException;
 import org.apache.velocity.exception.ParseErrorException;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.directive.Directive;
 import org.apache.velocity.runtime.parser.node.Node;
+
+import java.io.IOException;
+import java.io.Writer;
 
 /**
  * @author <a href="mailto:shinobu@ieee.org">Shinobu Kawai</a>
@@ -35,16 +35,14 @@ public class Ifnotnull extends Directive {
     /* (non-Javadoc)
      * @see org.apache.velocity.runtime.directive.Directive#getName()
      */
-    public String getName()
-    {
+    public String getName() {
         return "ifnotnull";
     }
 
     /* (non-Javadoc)
      * @see org.apache.velocity.runtime.directive.Directive#getType()
      */
-    public int getType()
-    {
+    public int getType() {
         return BLOCK;
     }
 
@@ -53,11 +51,9 @@ public class Ifnotnull extends Directive {
      */
     public boolean render(InternalContextAdapter context, Writer writer,
                           Node node) throws IOException, ResourceNotFoundException,
-            ParseErrorException, MethodInvocationException
-    {
+            ParseErrorException, MethodInvocationException {
         Object value = node.jjtGetChild(0).value(context);
-        if (value != null)
-        {
+        if (value != null) {
             Node content = node.jjtGetChild(1);
             content.render(context, writer);
         }

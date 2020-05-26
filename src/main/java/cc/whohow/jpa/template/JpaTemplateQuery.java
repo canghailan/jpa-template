@@ -1,5 +1,6 @@
 package cc.whohow.jpa.template;
 
+import cc.whohow.jpa.template.directive.*;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.runtime.RuntimeServices;
@@ -25,6 +26,8 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
     static {
         RuntimeSingleton.loadDirective(Ifnull.class.getName());
         RuntimeSingleton.loadDirective(Ifnotnull.class.getName());
+        RuntimeSingleton.loadDirective(Ifempty.class.getName());
+        RuntimeSingleton.loadDirective(Ifnotempty.class.getName());
         RuntimeSingleton.loadDirective(TemplateQueryParameter.class.getName());
         RuntimeSingleton.loadDirective(TemplateQueryWhere.class.getName());
     }

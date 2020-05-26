@@ -1,4 +1,4 @@
-package cc.whohow.jpa.template;
+package cc.whohow.jpa.template.directive;
 
 import org.apache.velocity.context.InternalContextAdapter;
 import org.apache.velocity.exception.MethodInvocationException;
