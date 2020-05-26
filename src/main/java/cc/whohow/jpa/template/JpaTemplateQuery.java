@@ -5,10 +5,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.runtime.RuntimeServices;
 import org.apache.velocity.runtime.RuntimeSingleton;
 import org.apache.velocity.runtime.parser.ParseException;
-import org.springframework.data.jpa.repository.query.AbstractJpaQuery;
-import org.springframework.data.jpa.repository.query.JpaParameters;
-import org.springframework.data.jpa.repository.query.JpaQueryMethod;
-import org.springframework.data.jpa.repository.query.QueryUtils;
+import org.springframework.data.jpa.repository.query.*;
 
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
@@ -49,6 +46,10 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
     }
 
     @Override
+    protected Query doCreateQuery(JpaParametersParameterAccessor jpaParametersParameterAccessor) {
+        return doCreateQuery(jpaParametersParameterAccessor.getValues());
+    }
+
     protected Query doCreateQuery(Object[] values) {
         VelocityContext context = new VelocityContext(getContext(values));
 
@@ -76,6 +77,10 @@ public class JpaTemplateQuery extends AbstractJpaQuery {
     }
 
     @Override
+    protected Query doCreateCountQuery(JpaParametersParameterAccessor jpaParametersParameterAccessor) {
+        return doCreateQuery(jpaParametersParameterAccessor.getValues());
+    }
+
     protected Query doCreateCountQuery(Object[] values) {
         VelocityContext context = new VelocityContext(getContext(values));
 
