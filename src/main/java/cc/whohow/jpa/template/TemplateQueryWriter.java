@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 public class TemplateQueryWriter extends Writer {
     private static final Pattern WHERE = Pattern.compile("\\s+where\\s*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern AND_OR = Pattern.compile("^(?<s>\\s*)(and|or)\\s+", Pattern.CASE_INSENSITIVE);
-    private List<CharSequence> buffer = new ArrayList<>();
+    private final List<CharSequence> buffer = new ArrayList<>();
     private int length = 0;
 
     @Override

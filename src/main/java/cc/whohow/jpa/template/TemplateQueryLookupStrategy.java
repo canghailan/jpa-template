@@ -1,14 +1,10 @@
 package cc.whohow.jpa.template;
 
-import org.springframework.data.jpa.provider.QueryExtractor;
-import org.springframework.data.jpa.repository.query.EscapeCharacter;
-import org.springframework.data.jpa.repository.query.JpaQueryLookupStrategy;
-import org.springframework.data.jpa.repository.query.JpaQueryMethod;
+import org.springframework.data.jpa.repository.query.JpaQueryMethodFactory;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.core.NamedQueries;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.QueryLookupStrategy;
-import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.RepositoryQuery;
 
 import javax.persistence.EntityManager;
@@ -16,17 +12,15 @@ import java.lang.reflect.Method;
 
 public class TemplateQueryLookupStrategy implements QueryLookupStrategy {
     private final EntityManager entityManager;
-    private final QueryExtractor extractor;
-    private final QueryLookupStrategy jpaQueryLookupStrategy;
+    private final JpaQueryMethodFactory queryMethodFactory;
+    private final QueryLookupStrategy defaultQueryLookupStrategy;
 
     public TemplateQueryLookupStrategy(EntityManager entityManager,
-                                       Key key,
-                                       QueryExtractor extractor,
-                                       QueryMethodEvaluationContextProvider evaluationContextProvider,
-                                       EscapeCharacter escape) {
+                                       JpaQueryMethodFactory queryMethodFactory,
+                                       QueryLookupStrategy defaultQueryLookupStrategy) {
         this.entityManager = entityManager;
-        this.extractor = extractor;
-        this.jpaQueryLookupStrategy = JpaQueryLookupStrategy.create(entityManager, key, extractor, evaluationContextProvider, escape);
+        this.queryMethodFactory = queryMethodFactory;
+        this.defaultQueryLookupStrategy = defaultQueryLookupStrategy;
     }
 
     @Override
@@ -34,10 +28,13 @@ public class TemplateQueryLookupStrategy implements QueryLookupStrategy {
         TemplateQuery templateQuery = method.getAnnotation(TemplateQuery.class);
         if (templateQuery != null) {
             return new JpaTemplateQuery(
-                    new JpaQueryMethod(method, metadata, factory, extractor), entityManager,
-                    templateQuery,
-                    new TemplateQueryResolver(method));
+                    queryMethodFactory.build(method, metadata, factory),
+                    entityManager,
+                    new TemplateQueryResolver(method, templateQuery));
         }
-        return jpaQueryLookupStrategy.resolveQuery(method, metadata, factory, namedQueries);
+        if (defaultQueryLookupStrategy != null) {
+            return defaultQueryLookupStrategy.resolveQuery(method, metadata, factory, namedQueries);
+        }
+        throw new IllegalStateException();
     }
 }
